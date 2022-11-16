@@ -1,40 +1,66 @@
-# Brain MRI Semantic Image Segmentation using improved u-net
+# ISIC 2017 Skin lesion segementation using an improved U-Net
 
-## Algorithm description
+## Dataset
+ISIC2017 dataset can be found on the following link
 
-![arch](C:\Users\karee\PatternFlow\recognition\arch.JPG)
+ISIC2017 dataset : https://challenge.isic-archive.com/data/#2017
 
-On high level u-net has contracting path (on the left side) and an expansive path. The contracting path of the improved u-net is built using context modules which are pre-activated residual blocks, each consists of batch normalization layer, activation, 3x3 conv, BN, Activation, 3x3 conv and addition layer. The down sampling is done using 3x3 convolution with 2x2 stride. The expansive path is built using localization module followed by up sampling modules. The localization module has 3x3 convolution layer followed by 1x1 convolution that half the number of feature maps. The up sample module is made of 2x2 up sample layer that expand the image size followed by 3x3 convolution that doubles the number of feature maps. Improved u-net uses the traditional skip connections but also has additional residual connection aggregating segmentation output from different levels of the architecture to augment the final output.  
+## Description of the algorithm
+![KakaoTalk_Snapshot_20221021_175510](https://user-images.githubusercontent.com/59554674/197143729-01160b28-8c62-4da2-b7b7-4b9041676450.png)
 
+We applied the network architecture as seen in the image above. The network architecture was referenced from 'Brain Tumor Segmentation and Radiomics
+Survival Prediction: Contribution to the BRATS 2017 Challenge' by Isensee, et al. The link will be shared below.
 
+Basically, this improved U-net is based on the existing U-net architectures. However, its core architecure inside the network is rather diffrent to the others.
+And the diffrences are that it has context, localization, and upsampling modules:
 
-![res_block](C:\Users\karee\PatternFlow\recognition\res_block.JPG)
+Context module consists of: Two 3 x 3 convolutional layers and a dropout layer with rate 0.3.
+Localization module consists of: A 3 x 3 convolutional layer and a 1 x 1 convolutional layer. 
+Upsampling modules consists of: An upsampling layer and a 3 x 3 convolutional layer.
 
-## Semantic image segmentation problem
-This is about identifying the four segments or parts in the brain from MRI images. It is basically pixel wise classification of the image i.e. identify for each pixel to which class it belongs.
+In this architecture, there are two pathways, which are the context pathway(left) and the localization pathway(right).
+Through the context pathway, the U-net reduces the resolution of the feature maps by using the context module.
+Through the localiztion pathway, the U-net take features for the lower level to the higher level by using the localization module that upsampling the low resolution feature maps. After this, the concatenation between the upsampled features and the context aggregation in the same level is done.
 
-## Train parameters and procedure
-The used activation is leaky Relu with alpha = .01.
-The used optimizer is Adam and I used learning rate of .0005 
-The paper used dice similarity loss to train their model, but I couldn’t implement it, so I used Categorical cross entropy, and used Dice Similarity Coefficient as a metric to monitor training. 
-I used multiples of 16 filters at each level of the network exactly as specified by the paper.  
-I trained the model for 200 ephocs.
+Finally, the output forms via element-wise sum between the concatenation above and the segmentation layers.
 
-The dataset was already split into training, validation and test data sets. Validation dataset is useful during training to monitor training for overfitting and I used test dataset to assess model generalization capability on a set not seen during training. 
-## Dependencies and data pre-processing 
-The test script download , unzip the dataset images. The methods that load and process dataset take the directory path were the images were downloaded as a parameter. An update to these file paths might be required for the algorithm to run. 
+reference : https://arxiv.org/abs/1802.10508v1
 
-Training data was normalized by subtracting mean and dividing by standard deviation and then normalizing the pixel values between 0-1. I noticed that normalizing the data this way results in a more stable training vs dividing by 255.
-The label images as well need to be pre-processed and converted to one hot encoding representation. 
+## Task
 
+Train a model for the image segmentation of skin lesion using the improved U-net architecture.
 
+## How it works
 
-## Output 
-The below results show the prediction of the four segments vs ground truth of image 3 and 5 in test set. Training loss was .14 , validation loss .425 and DCS of test set was .8972.
+### Data preprocessing
+Firstly, we needed to resize all the images to 256 x 256 because the images of the dataset did not have the same size. And saved all the resized images into new directories. Then, created blank arrays to store the resized training, validation, and test images and joined the resized images to the blank arrays respectively.
+This process has taken some time. And created data frames to store the excel files containing the names of the images. After that, loaded and generated the normalized images and masks of training, validation, and test data.
 
-![all3](C:\Users\karee\PatternFlow\recognition\all3.JPG)![c2](C:\Users\karee\PatternFlow\recognition\c2.JPG)![all5](C:\Users\karee\PatternFlow\recognition\all5.JPG)![c2_5](C:\Users\karee\PatternFlow\recognition\c2_5.JPG)![c3](C:\Users\karee\PatternFlow\recognition\c3.JPG)![c1_5](C:\Users\karee\PatternFlow\recognition\c1_5.JPG)![c3](C:\Users\karee\PatternFlow\recognition\c3.JPG)![c1](C:\Users\karee\PatternFlow\recognition\c1.JPG)
+### Training
+After data preprocessing, we had train_x, train_y, validation_x, and validation_y. And loaded an improve U-net model that takes an image with 256 x 256 x 3 created by Input fucntion in Keras library. And we set the learning rate as 0.0005 and the decay rate as learning rate x 0.985 as the paper stated. And we compiled a model using Adam for optimization, and dice similarity loss wss used as a metric. And we fitted the model with train_x, train_y, validation_x, and validation_y. The batch size was 8, and epochs was 300.
 
+### Results
 
-## model summery
+We achieved a dice similarity of 0.51.
+
+reference : https://arxiv.org/pdf/1606.04797v1.pdf
+
+![KakaoTalk_Snapshot_20221021_224451](https://user-images.githubusercontent.com/59554674/197198882-7c2e081a-90f5-4db8-9886-19d771081ea4.png)
+
+The images below are good cases and bad cases.
+#### Good results
+![Result_1](https://user-images.githubusercontent.com/59554674/197197864-a2404488-0146-4190-8e3e-35ded7f01f7f.png)
+![Result2](https://user-images.githubusercontent.com/59554674/197197901-ed236ae2-3b32-4811-8a2a-bc9b1f16d160.png)
+![Result3](https://user-images.githubusercontent.com/59554674/197197930-1021a9c5-31b7-4f7a-927a-2a42e103a797.png)
+
+#### Bad results
+![BadResult](https://user-images.githubusercontent.com/59554674/197198195-f4304b79-409e-40ef-bf39-ff10fe5f41a8.png)
+![BadResult2](https://user-images.githubusercontent.com/59554674/197198811-41bb423e-4ad1-45af-bef6-54296ea50c1b.png)
+
+## Environment
+OS : Windows10
+Python : 3.7
+Cuda : 10.1
+Tensorflow: 2.1.0
 
 
